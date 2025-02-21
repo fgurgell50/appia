@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack://[project]/src/pages/index.module.scss.module.css"],"sourcesContent":[".container{display:flex;align-items:center;justify-content:center;min-height:100vh;background-color:#f4f6f9}.icon{font-size:50px;color:#0070f3;margin-bottom:16px}.cardGrid{display:grid;grid-template-columns:1fr;gap:20px;max-width:800px;width:100%;margin-top:-120px}@media(min-width: 768px){.cardGrid{grid-template-columns:1fr 1fr}}.card{background-color:#fff;padding:20px;border-radius:8px;font-family:\"DM Sans\",sans-serif;box-shadow:0 2px 4px rgba(0,0,0,.1);cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}.card:hover{transform:translateY(-5px);box-shadow:0 4px 8px rgba(0,0,0,.15)}.cardContent{text-align:center;font-family:\"DM Sans\",sans-serif}.icon{width:60px;height:60px;margin-bottom:16px}.cardTitle{font-size:18px;font-weight:bold;margin-bottom:8px;color:#333;font-family:\"DM Sans\",sans-serif}.cardDescription{font-size:14px;color:#666;font-family:\"DM Sans\",sans-serif}"],"names":[],"mappings":"AAAA;;;;;;;;AAA4G;;;;;;AAAsD;;;;;;;;;AAAuG;EAAyB;;;;;AAAyC;;;;;;;;;;AAAiM;;;;;AAA4E;;;;;AAAgE;;;;;;AAAgD;;;;;;;;AAAyG"}},
+    {"offset": {"line": 69, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"A"}}]
+}

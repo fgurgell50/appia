@@ -1,0 +1,12 @@
+rm -rf .next node_modules
+npm install
+npm run dev
+
+
+Remove-Item -Recurse -Force .next
+
+Remove-Item -Recurse -Force .next
+Remove-Item -Recurse -Force node_modules
+Remove-Item package-lock.json
+npm cache clean --force
+npm install

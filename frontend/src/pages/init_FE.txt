@@ -1,0 +1,232 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+export default function Page() {
+  const [isClient, setIsClient] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [details, setDetails] = useState<string | null>(null);
+  const [usage, setUsage] = useState<string | null>(null);
+  const [planoDeTestes, setPlanoDeTestes] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setFile(event.target.files[0]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) return alert("Por favor, selecione um arquivo.");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error("Limite de cota excedido. Tente novamente mais tarde.");
+        }
+        throw new Error("Erro ao enviar o arquivo.");
+      }
+
+      const data = await response.json();
+      setResult(data.pontosDeFuncao);
+      setDetails(data.detalhamento);
+      setPlanoDeTestes(data.planoDeTestes);
+      setUsage(data.usage);
+
+      setFile(null);
+    } catch (error) {
+      console.error("❌ Erro:", error);
+
+      // Tratamento do erro para garantir que seja um objeto do tipo Error
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("Ocorreu um erro desconhecido.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        backgroundColor: "#14154A",
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: "#DEE2E6",
+          padding: "30px",
+          borderRadius: "12px",
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
+          width: "100%",
+          maxWidth: "600px",
+          textAlign: "center",
+          color: "#FFFFFF",
+        }}
+      >
+        <h1
+          style={{
+            fontSize: "22px",
+            color: "#23272B",
+            fontWeight: "bold",
+            marginBottom: "20px",
+          }}
+        >
+          Estimativa de Pontos de Função
+        </h1>
+
+        <input
+          type="file"
+          onChange={handleFileChange}
+          style={{
+            backgroundColor: "#555",
+            border: "1px solid #444",
+            borderRadius: "6px",
+            padding: "10px",
+            color: "#FFF",
+            marginBottom: "15px",
+            width: "100%",
+          }}
+        />
+
+        <button
+          onClick={handleUpload}
+          disabled={loading || !file}
+          style={{
+            backgroundColor: loading || !file ? "#555" : "#23272B",
+            color: "#fff",
+            border: "none",
+            borderRadius: "6px",
+            padding: "10px 20px",
+            cursor: loading || !file ? "not-allowed" : "pointer",
+            width: "100%",
+            fontWeight: "bold",
+          }}
+        >
+          Enviar para Análise
+        </button>
+
+        {result && (
+          <div
+            style={{
+              marginTop: "20px",
+              backgroundColor: "#2C2C4A",
+              padding: "15px",
+              borderRadius: "8px",
+            }}
+          >
+            <h3 style={{ fontSize: "18px", marginBottom: "10px" }}>Resultado:</h3>
+            <p>Pontos de Função: {result}</p>
+          </div>
+        )}
+
+        {details && (
+          <div
+            style={{
+              marginTop: "20px",
+              backgroundColor: "#2C2C4A",
+              padding: "15px",
+              borderRadius: "8px",
+              overflowX: "auto",
+            }}
+          >
+            <h3 style={{ fontSize: "18px", marginBottom: "10px" }}>Detalhamento:</h3>
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                textAlign: "left",
+                minWidth: "500px",
+              }}
+            >
+              {details}
+            </pre>
+          </div>
+        )}
+
+        {planoDeTestes && (
+          <div
+            style={{
+              marginTop: "20px",
+              backgroundColor: "#2C2C4A",
+              padding: "15px",
+              borderRadius: "8px",
+              overflowX: "auto",
+            }}
+          >
+            <h3 style={{ fontSize: "18px", marginBottom: "10px" }}>Plano de Testes:</h3>
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                textAlign: "left",
+                minWidth: "500px",
+              }}
+            >
+              {planoDeTestes}
+            </pre>
+          </div>
+        )}
+
+        {loading && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+            }}
+          >
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                border: "8px solid #fff",
+                borderTop: "8px solid transparent",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+              }}
+            ></div>
+          </div>
+        )}
+
+        <style jsx>{`
+          @keyframes spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}</style>
+      </div>
+    </div>
+  );
+}

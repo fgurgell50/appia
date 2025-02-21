@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 55, "column": 0}, "map": {"version":3,"sources":["file://C%3A/Users/Colaborador/webpf/my-webpf/frontend/src/pages/_document.tsx"],"sourcesContent":["// pages/_document.tsx\r\nimport Document, { Html, Head, Main, NextScript } from 'next/document';\r\n\r\nclass MyDocument extends Document {\r\n  render() {\r\n    return (\r\n      <Html lang=\"pt-br\">\r\n        <Head>\r\n          {/* Link para a fonte Roboto */}\r\n          <link \r\n            href=\"https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap\" \r\n            rel=\"stylesheet\" \r\n          />\r\n          {/* Link para a fonte DM Sans */}\r\n          <link \r\n            href=\"https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;700&display=swap\" \r\n            rel=\"stylesheet\" \r\n          />\r\n        </Head>\r\n        <body>\r\n          <Main />\r\n          <NextScript />\r\n        </body>\r\n      </Html>\r\n    );\r\n  }\r\n}\r\n\r\nexport default MyDocument;\r\n"],"names":[],"mappings":"AAAA,sBAAsB;;;;;AACtB;;;AAEA,MAAM,mBAAmB,yHAAA,CAAA,UAAQ;IAC/B,SAAS;QACP,qBACE,qKAAC,yHAAA,CAAA,OAAI;YAAC,MAAK;;8BACT,qKAAC,yHAAA,CAAA,OAAI;;sCAEH,qKAAC;4BACC,MAAK;4BACL,KAAI;;;;;;sCAGN,qKAAC;4BACC,MAAK;4BACL,KAAI;;;;;;;;;;;;8BAGR,qKAAC;;sCACC,qKAAC,yHAAA,CAAA,OAAI;;;;;sCACL,qKAAC,yHAAA,CAAA,aAAU;;;;;;;;;;;;;;;;;IAInB;AACF;uCAEe"}},
+    {"offset": {"line": 119, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"A"}}]
+}

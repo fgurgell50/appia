@@ -1,0 +1,139 @@
+import { IncomingForm } from "formidable";
+import fs from "fs";
+import { fileTypeFromBuffer } from "file-type";
+import mammoth from "mammoth";
+import pdfParse from "pdf-parse";
+import OpenAI from "openai";
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export default async function handler(req, res) {
+  if (req.method === "POST") {
+    const form = new IncomingForm({ keepExtensions: true });
+
+    form.parse(req, async (err, fields, files) => {
+      if (err) {
+        console.error("❌ Erro ao processar o upload:", err);
+        return res.status(500).json({ error: "Erro ao processar o upload." });
+      }
+
+      const file = files.file;
+      const filePath =
+        file.filepath || (Array.isArray(file) ? file[0].filepath : null);
+
+      if (!filePath) {
+        console.error("❌ Arquivo não encontrado.");
+        return res.status(400).json({ error: "Arquivo não encontrado." });
+      }
+
+      try {
+        const buffer = fs.readFileSync(filePath);
+        const fileTypeResult = await fileTypeFromBuffer(buffer);
+        const fileType = fileTypeResult ? fileTypeResult.ext : "unknown";
+
+        let content = "";
+        if (fileType === "pdf") {
+          const data = await pdfParse(buffer);
+          content = data.text;
+        } else if (fileType === "docx") {
+          const result = await mammoth.extractRawText({ buffer });
+          content = result.value;
+        } else {
+          console.error("❌ Formato de arquivo não suportado.");
+          return res
+            .status(400)
+            .json({ error: "Formato de arquivo não suportado." });
+        }
+
+        const prompt = `Você é um especialista em contagem de Pontos de Função (PF) conforme o Manual de Práticas de Contagem de Pontos de Função (CPM). Avalie o seguinte conteúdo:
+
+"""
+${content}
+"""
+
+Classifique cada função de acordo com as regras do CPM e calcule o total de Pontos de Função (PF).
+
+✅ **Retorne o resultado da seguinte forma:**
+1. **Funções Identificadas:**
+   - Entrada Externa (EE): [Descrição] - [Complexidade] - [Pontos]
+   - Saída Externa (SE): [Descrição] - [Complexidade] - [Pontos]
+   - Consulta Externa (CE): [Descrição] - [Complexidade] - [Pontos]
+   - Arquivo Lógico Interno (ALI): [Descrição] - [Complexidade] - [Pontos]
+   - Arquivo de Interface Externa (AIE): [Descrição] - [Complexidade] - [Pontos]
+
+2. **Total de Pontos de Função:** [Soma Final]
+
+Seja consistente em suas respostas para o mesmo conteúdo. Não inclua explicações adicionais. Forneça um único resultado final.`;
+
+        try {
+          const response = await openai.chat.completions.create({
+            //model: "gpt-4",
+            model: "gpt-3.5-turbo-0125",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0,
+            top_p: 0,
+            frequency_penalty: 0,
+            presence_penalty: 0,
+            max_tokens: 1000,
+          });
+
+          const messageContent = response.choices[0]?.message?.content.trim();
+          console.log("📋 Resposta da API:", messageContent);
+
+          // Ajuste da expressão regular para capturar o número corretamente
+          const totalPointsMatch = messageContent.match(
+            /Total de Pontos de Função[^\d]*(\d+)(\s*(PF|Pontos))?/i
+          );
+
+          // Adiciona log para verificar o que foi capturado
+          console.log(
+            "🔍 Total de Pontos de Função encontrado:",
+            totalPointsMatch
+          );
+
+          const totalPoints = totalPointsMatch
+            ? parseInt(totalPointsMatch[1], 10)
+            : 0;
+
+          if (totalPoints > 0) {
+            return res.status(200).json({
+              pontosDeFuncao: totalPoints,
+              detalhamento: messageContent,
+              reset: true,
+            });
+          } else {
+            console.error("❌ Total de Pontos de Função não identificado.");
+            return res.status(400).json({
+              error:
+                "Não foi possível identificar o total de Pontos de Função.",
+            });
+          }
+        } catch (error) {
+          console.error(
+            "❌ Erro ao processar o arquivo e enviar para o OpenAI:",
+            error
+          );
+          return res.status(500).json({
+            error: "Erro ao processar o arquivo e enviar para o OpenAI.",
+          });
+        }
+      } catch (error) {
+        console.error("❌ Erro interno ao processar o arquivo:", error);
+        return res
+          .status(500)
+          .json({ error: "Erro interno ao processar o arquivo." });
+      }
+    });
+  } else {
+    res.setHeader("Allow", ["POST"]);
+    res.status(405).end(`Método ${req.method} não permitido`);
+  }
+}

@@ -1,0 +1,66 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background-color: #6734ff; 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  font-family: "DM Sans", sans-serif;
+  width: 100%;
+}
+
+.logoContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.ellaWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px; 
+}
+
+.ella {
+  font-size: 28px;
+  font-weight: bold;
+  color: #ffffff; 
+}
+
+.definition {
+  font-size: 14px;
+  font-weight: normal;
+  color: #bfbfbf; 
+}
+
+.tagline {
+  font-size: 14px;
+  color: #ffffff;
+  margin-top: 4px;
+}
+
+.nav {
+  display: flex;
+  gap: 20px;
+  padding: 0 30px;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+
+  a {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    color: #ffffff;
+    text-decoration: none;
+    transition: color 0.3s ease-in-out;
+
+    &:hover {
+      color: #1e90ff; /* Azul claro ao passar o mouse */
+    }
+
+    .icon {
+      margin-right: 8px;
+    }
+  }
+}
