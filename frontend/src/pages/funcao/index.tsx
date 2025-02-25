@@ -8,6 +8,7 @@ import Modal from "@/components/Modal";
 
 export default function Funcao() {
   //const [inputMode, setInputMode] = useState("upload");
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [inputMode, setInputMode] = useState<string>("upload");
 
   const [manualText, setManualText] = useState("");
@@ -55,6 +56,7 @@ ${content}
   };
 
   const parseResult = (resultString: string) => {
+
     const functionsRegex = /\*\*(.*?)\*\*:\s(.*?)\s-\s(.*?)\s-\s(\d+)\sPF/g;
     const functions = [];
     let match;
@@ -95,8 +97,9 @@ ${content}
       setFile(event.target.files[0]);
     }
   };
-
-  const handleAnalyze = async () => {
+  
+  
+  /*const handleAnalyze = async () => {
     if (inputMode === "upload" && !file) {
       return alert("Por favor, selecione um arquivo.");
     }
@@ -125,6 +128,42 @@ ${content}
       setLoading(false);
     }
   };
+*/
+
+const handleAnalyze = async () => {
+  if (inputMode === "upload" && !file) {
+    return alert("Por favor, selecione um arquivo.");
+  }
+  if (inputMode === "text" && !manualText.trim()) {
+    return alert("Por favor, insira um texto.");
+  }
+
+  setLoading(true);
+  const formData = new FormData();
+
+  console.log("🚀 Prompt Enviado para Análise:", currentPrompt);
+  
+  formData.append("prompt", currentPrompt);  // Usar o prompt atualizado
+  if (inputMode === "upload" && file) formData.append("file", file);
+  if (inputMode === "text") formData.append("text", manualText);
+
+  try {
+    const data = await analyzeContent(formData);
+
+    console.log("📌 Resposta da API:", data);
+    console.log("📌 Resposta da API:", parseResult(data.result));
+
+    setResult(parseResult(data.result));
+    setTotalPoints(data.totalPoints);
+    setHasAnalyzed(true);
+  } catch (error) {
+    console.error("Erro:", error);
+    alert("Erro ao processar a análise.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
    return (
     <>
@@ -199,7 +238,7 @@ ${content}
       )}
 
       {result.functions.length > 0 ? (
-        <div className={styles.result}>
+        <div className={styles.preformattedText}>
           <h3>Funções Identificadas</h3>
           <table className={styles.table}>
             <thead>
@@ -222,9 +261,13 @@ ${content}
             </tbody>
           </table>
           <h4 className={styles.totalPoints}>Total de Pontos de Função: {totalPoints} PF</h4>
-        </div>
-      ) : null}
-    </div>
+          </div>
+        ) : (
+          hasAnalyzed && result.functions.length === 0 && (
+            <p className={styles.noResults}>Nenhum resultado encontrado para o prompt enviado.</p>
+          )
+        )}
+      </div>
     </>
   );
 }

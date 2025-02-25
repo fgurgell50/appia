@@ -23,7 +23,6 @@ export default function Funcao() {
     }
   };
 
-/*  
   const handleAnalyze = async () => {
     if (inputMode === "upload" && !file) {
       return alert("Por favor, selecione um arquivo.");
@@ -33,43 +32,24 @@ export default function Funcao() {
     }
   
     setLoading(true);
-    const formData = new FormData();
-    const content = inputMode === "upload" && file ? "" : manualText;
-    formData.append("prompt", generatePrompt(content));
-    if (inputMode === "upload" && file) formData.append("file", file);
-    if (inputMode === "text") formData.append("text", manualText);
-
-    try {
-      const data = await analyzeContent(formData);
-      setResult(parseResult(data.result));
-      setTotalPoints(data.totalPoints);
-    } catch (error) {
-      console.error("Erro:", error);
-      alert("Erro ao processar a análise.");
-    } finally {
-      setLoading(false);
-    }
-  };
-  */
-
-  const handleAnalyze = async () => {
-    if (inputMode === "upload" && !file) {
-      return alert("Por favor, selecione um arquivo.");
-    }
-    if (inputMode === "text" && !manualText.trim()) {
-      return alert("Por favor, insira um texto.");
-    }
-  
-    setLoading(true);
-    const formData = new FormData();
-    const content = inputMode === "upload" && file ? "" : manualText;
-    formData.append("prompt", generatePrompt(content));
     
+    const formData = new FormData();
+    
+    // Usa o prompt atualizado pelo usuário no modal
+    formData.append("prompt", currentPrompt);  
+  
     if (inputMode === "upload" && file) {
-      if (!file.type.includes("text") && !file.type.includes("pdf")) {
+      const validTypes = [
+        "text/plain", 
+        "application/pdf", 
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ];
+    
+      if (!validTypes.includes(file.type)) {
         setLoading(false);
-        return alert("Formato de arquivo inválido. Use apenas .txt ou .pdf.");
+        return alert("Formato de arquivo inválido. Use apenas .txt, .pdf ou .docx.");
       }
+    
       formData.append("file", file);
     }
   
@@ -91,11 +71,11 @@ export default function Funcao() {
       setLoading(false);
     }
   };
-
+  
   const generatePrompt = (content: string): string => {
     return `
 Desenvolva um **plano de testes baseado no TDD (Test-Driven Development)** 
-para a história de usário que foi encaminhada consiederando as funcionalidades, regras de negócio, 
+para a história de usuário que foi encaminhada consiederando as funcionalidades, regras de negócio, 
 regras de interfaces, regras de sistemas e critérios de aceite. O plano de testes deve incluir:
 
 ### 1. Estrutura do Plano de Testes
@@ -207,9 +187,10 @@ Retorne o plano de testes estruturado, considerando as melhores práticas do TDD
       {loading && (
         <div className={styles.fullscreenSpinner}>
           <div className={styles.spinner}></div>
-          <p>Analisando...</p>
+          <p>Aguarde, analisando...</p>
         </div>
       )}
+
 
       {result && (
         <div className={styles.result}>
