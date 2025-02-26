@@ -1,82 +1,37 @@
-"use client";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { analyzeContent } from "@/services/api";
 import styles from "./style.module.scss";
 import Header from "@/components/Header";
-import Modal from "@/components/Modal"; 
+import Modal from "@/components/Modal";
 
-export default function Funcao() {
-  const [inputMode, setInputMode] = useState("upload");
+export default function PlanoDeTestes() {
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [inputMode, setInputMode] = useState<string>("upload");
+
   const [manualText, setManualText] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [result, setResult] = useState<any>(null);
-  const [totalPoints, setTotalPoints] = useState<number | null>(null);
+  const [result, setResult] = useState<any>({ tests: [] });
+  const [totalTests, setTotalTests] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [currentPrompt, setCurrentPrompt] = useState<string>("");
+  const [originalPrompt, setOriginalPrompt] = useState<string>(""); // Estado para o prompt original
+  const [alteredPrompt, setAlteredPrompt] = useState<string>(""); // Estado para o prompt alterado
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setFile(event.target.files[0]);
-    }
-  };
+  useEffect(() => {
+    // Gera o prompt inicial baseado no texto fornecido
+    const generatedPrompt = generateTestPlanPrompt(manualText);
+    setOriginalPrompt(generatedPrompt);
+    setAlteredPrompt(generatedPrompt); // Inicialmente, o prompt alterado é o mesmo do original
+  }, [manualText]);
 
-  const handleAnalyze = async () => {
-    if (inputMode === "upload" && !file) {
-      return alert("Por favor, selecione um arquivo.");
-    }
-    if (inputMode === "text" && !manualText.trim()) {
-      return alert("Por favor, insira um texto.");
-    }
-  
-    setLoading(true);
-    
-    const formData = new FormData();
-    
-    // Usa o prompt atualizado pelo usuário no modal
-    formData.append("prompt", currentPrompt);  
-  
-    if (inputMode === "upload" && file) {
-      const validTypes = [
-        "text/plain", 
-        "application/pdf", 
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      ];
-    
-      if (!validTypes.includes(file.type)) {
-        setLoading(false);
-        return alert("Formato de arquivo inválido. Use apenas .txt, .pdf ou .docx.");
-      }
-    
-      formData.append("file", file);
-    }
-  
-    try {
-      const response = await analyzeContent(formData);
-      if (!response || !response.result) {
-        throw new Error("Resposta inválida do servidor.");
-      }
-      setResult(parseResult(response.result));
-      setTotalPoints(response.totalPoints);
-    } catch (error: any) {
-      console.error("Erro na análise:", error);
-      let errorMessage = "Erro ao processar a análise.";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      alert(`Erro ao processar a análise: ${error.message || error}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const generatePrompt = (content: string): string => {
+  const generateTestPlanPrompt = (content: string): string => {
     return `
+    
 Desenvolva um **plano de testes baseado no TDD (Test-Driven Development)** 
-para a história de usuário que foi encaminhada consiederando as funcionalidades, regras de negócio, 
-regras de interfaces, regras de sistemas e critérios de aceite. O plano de testes deve incluir:
+para a história de usuário que foi encaminhada considerando as funcionalidades, 
+regras de negócio, regras de interfaces, regras de sistemas e critérios de aceite. 
+O plano de testes deve incluir:
 
 ### 1. Estrutura do Plano de Testes
 - **Cenários de Teste**: Definir os principais cenários com base na funcionalidade descrita.
@@ -98,37 +53,59 @@ ${content}
 
 Retorne o plano de testes estruturado, considerando as melhores práticas do TDD.`;
   };
-
-  const parseResult = (resultString: string) => {
+    
+  const parseTestPlanResult = (resultString: string) => {
     return { text: resultString };
   };
 
-  /*
   const handleOpenModal = () => {
-    console.log("Prompt gerado:", generatePrompt(manualText));
-    setCurrentPrompt(generatePrompt(manualText));  // Passando o prompt gerado atual para o modal
-    setIsModalOpen(true);  // Abre o modal
-  };
-  */
-
-  const handleOpenModal = () => {
-    const content = inputMode === "upload" && file ? "Arquivo selecionado: " + file.name : manualText;
-    const generatedPrompt = generatePrompt(content);
-    console.log("Prompt gerado:", generatedPrompt);
-    setCurrentPrompt(generatedPrompt);
     setIsModalOpen(true);
   };
-  
+
   const handleCloseModal = () => {
-    setIsModalOpen(false);  // Fecha o modal
+    setIsModalOpen(false);
   };
 
   const handleSavePrompt = (newPrompt: string) => {
-    console.log("🔎 Novo Prompt do Modal (antes de enviar para análise):", newPrompt);
-    setCurrentPrompt(newPrompt);  // Atualiza o prompt com o novo valor
-    setManualText(newPrompt);  // Atualiza o texto manual com o novo prompt
+    setAlteredPrompt(newPrompt);
   };
 
+  const handleAnalyze = async () => {
+    if (inputMode === "upload" && !file) {
+      return alert("Por favor, selecione um arquivo.");
+    }
+    if (inputMode === "text" && !manualText.trim()) {
+      return alert("Por favor, insira um texto.");
+    }
+
+    setLoading(true);
+    const formData = new FormData();
+
+    // Se o prompt foi alterado, enviaremos o alteredPrompt. Caso contrário, enviaremos o originalPrompt.
+    const promptToSend = alteredPrompt === originalPrompt ? originalPrompt : alteredPrompt;
+
+    console.log("🚀 Prompt Enviado para Análise:", promptToSend);
+
+    formData.append("prompt", promptToSend); // Usa o prompt que foi gerado ou alterado
+    if (inputMode === "upload" && file) formData.append("file", file);
+    if (inputMode === "text") formData.append("text", manualText);
+
+    try {
+      const data = await analyzeContent(formData);
+
+      console.log("📌 Resposta da API:", data);
+
+      setResult(parseTestPlanResult(data.result)); // Usar a função de análise do plano de testes
+
+      setTotalTests(data.totalTests); // Supondo que a API retorne o total de testes realizados
+      setHasAnalyzed(true);
+    } catch (error) {
+      console.error("Erro:", error);
+      alert("Erro ao processar a análise.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -149,7 +126,12 @@ Retorne o plano de testes estruturado, considerando as melhores práticas do TDD
       {inputMode === "upload" ? (
 
       <div className={styles.uploadContainer}>
-        <input type="file" id="fileInput" className={styles.fileInput} onChange={handleFileChange} />
+        <input 
+          type="file" 
+          id="fileInput" 
+          className={styles.fileInput} 
+          onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+        />
         <label htmlFor="fileInput" className={styles.uploadButton}>📁 Escolher Arquivo</label>
         {file && <span className={styles.fileName}>{file.name}</span>}
       </div>
@@ -178,10 +160,10 @@ Retorne o plano de testes estruturado, considerando as melhores práticas do TDD
 
 
         <Modal 
-          isOpen={isModalOpen} 
-          onClose={handleCloseModal} 
-          onSave={handleSavePrompt} 
-          currentPrompt={currentPrompt} 
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onSave={handleSavePrompt}
+          currentPrompt={alteredPrompt} // Passa o prompt alterado para o modal
         />
 
       {loading && (
@@ -191,14 +173,17 @@ Retorne o plano de testes estruturado, considerando as melhores práticas do TDD
         </div>
       )}
 
-
-      {result && (
+      {hasAnalyzed && result.text ? (
         <div className={styles.result}>
-          <h3>Plano de Testes Gerado</h3>
+          <h4>Plano de Testes Gerado</h4>
           <pre className={styles.preformattedText}>{result.text}</pre>
         </div>
-      )}
+      ) : hasAnalyzed ? (
+        <p className={styles.noResults}>Nenhum Resultado para essa consulta.</p>
+      ) : null}
+
     </div>
     </>
   );
 }
+

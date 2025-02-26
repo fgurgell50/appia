@@ -1,42 +1,28 @@
-import { FaCode, FaClipboardList } from "react-icons/fa"; // Ícones do Font Awesome
-import { useRouter } from "next/navigation";
+import { FaCode, FaClipboardList } from "react-icons/fa"; 
 import styles from "./index.module.scss";
 import Header from "@/components/Header";
+import Card from "@/components/Card"; 
 
 export default function Home() {
-  const router = useRouter();
-
-  const handleNavigation = (path: string) => {
-    router.push(path);
-  };
-
   return (
     <>
-    <Header />
-    <div className={styles.container}>
-      <div className={styles.cardGrid}>
-        <div className={styles.card} onClick={() => handleNavigation("/funcao")}>
-          <div className={styles.cardContent}>
-            <FaCode className={styles.icon} />
-            <h2 className={styles.cardTitle}>Contagem de Pontos de Função</h2>
-            <p className={styles.cardDescription}>
-              Analise o conteúdo e calcule os pontos de função de acordo com as regras.
-            </p>
-          </div>
-        </div>
-
-        <div className={styles.card} onClick={() => handleNavigation("/planotestes")}>
-          <div className={styles.cardContent}>
-            <FaClipboardList className={styles.icon} />
-            <h2 className={styles.cardTitle}>Plano de Testes</h2>
-            <p className={styles.cardDescription}>
-              Gere um plano de testes detalhado com base nos requisitos fornecidos.
-            </p>
-          </div>
+      <Header />
+      <div className={styles.container}>
+        <div className={styles.cardGrid}>
+          <Card
+            title="Contagem de Pontos de Função"
+            description="Analise o conteúdo e calcule os pontos de função de acordo com as regras."
+            icon={<FaCode />}
+            path="/funcao"
+          />
+          <Card
+            title="Plano de Testes"
+            description="Gere um plano de testes detalhado com base nos requisitos fornecidos."
+            icon={<FaClipboardList />}
+            path="/planotestes"
+          />
         </div>
       </div>
-    </div>
     </>
-
   );
 }

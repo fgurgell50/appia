@@ -7,7 +7,7 @@ export const handleUpload = async (req: Request, res: Response) => {
     const text = req.body.text || null;
     const file = req.file || null;
 
-    console.log("🚀 Prompt Enviado para Análise:", prompt);
+    //console.log("🚀 Prompt Enviado para Análise:", prompt);
     
     const result = await processFile(file, prompt, text);
    

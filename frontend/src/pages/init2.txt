@@ -1,340 +1,489 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from "react";
+import { analyzeContent } from "@/services/api";
+import styles from "./style.module.scss";
+import Header from "@/components/Header";
+import Modal from "@/components/Modal"; 
 
-export default function Page() {
-  const [isClient, setIsClient] = useState(false);
-  const [file, setFile] = useState(null);
-  const [result, setResult] = useState(null);
-  const [details, setDetails] = useState(null);
-  const [usage, setUsage] = useState(null);
-  const [planoDeTestes, setPlanoDeTestes] = useState(null);
+export default function Funcao() {
+  //const [inputMode, setInputMode] = useState("upload");
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [inputMode, setInputMode] = useState<string>("upload");
+
+  const [manualText, setManualText] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [result, setResult] = useState<any>({ functions: [] });
+  const [totalPoints, setTotalPoints] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [currentPrompt, setCurrentPrompt] = useState<string>("");
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    console.log("Estado atualizado:", inputMode);
+  }, [inputMode]);
+  
 
-  const handleFileChange = (event) => {
-    setFile(event.target.files[0]);
+  const generatePrompt = (content: string): string => {
+    return `
+Você é um especialista em **Análise de Pontos de Função (APF)** conforme o **Manual de Práticas de Contagem de Pontos de Função (CPM - IFPUG)**. Sua tarefa é avaliar o conteúdo abaixo e classificar **cada função identificada**, determinando sua complexidade e calculando o total de Pontos de Função (PF).
+
+### **Regras da Análise**
+- A contagem deve ser feita de acordo com os **requisitos funcionais do usuário**.
+- Utilize os critérios do CPM para classificar **Entrada Externa (EE), Saída Externa (SE), Consulta Externa (CE), Arquivo Lógico Interno (ALI) e Arquivo de Interface Externa (AIE)**.
+- Atribua corretamente a **complexidade (Baixa, Média, Alta)** para cada função, considerando:
+  - **EE, SE e CE**: número de Arquivos Referenciados (AR) e Elementos de Dados (DET).
+  - **ALI e AIE**: número de Registros Lógicos Internos (RLI) e Elementos de Dados (DET).
+
+### **Conteúdo para Análise**:
+"""
+${content}
+"""
+
+### **Instruções para a Resposta**
+1. **Identifique e classifique cada função**, utilizando o seguinte formato:
+   - **Entrada Externa (EE)**: [Descrição] - [Complexidade] - [Pontos]
+   - **Saída Externa (SE)**: [Descrição] - [Complexidade] - [Pontos]
+   - **Consulta Externa (CE)**: [Descrição] - [Complexidade] - [Pontos]
+   - **Arquivo Lógico Interno (ALI)**: [Descrição] - [Complexidade] - [Pontos]
+   - **Arquivo de Interface Externa (AIE)**: [Descrição] - [Complexidade] - [Pontos]
+
+2. **Cálculo Total**:
+   - Some os Pontos de Função identificados e forneça o **Total de Pontos de Função (PF)**.
+
+📢 **Atenção**: Retorne apenas a análise no formato solicitado, sem explicações adicionais.`;
   };
 
-  const calculateCost = (model, promptTokens, completionTokens) => {
-    let costPer1KPrompt = 0;
-    let costPer1KCompletion = 0;
+  const parseResult = (resultString: string) => {
 
-    if (model.includes("gpt-4")) {
-      costPer1KPrompt = 0.03; // USD por 1.000 tokens de entrada (prompt) GPT-4
-      costPer1KCompletion = 0.06; // USD por 1.000 tokens de saída (resposta) GPT-4
-    } else if (model.includes("gpt-3.5")) {
-      costPer1KPrompt = 0.0015; // USD por 1.000 tokens de entrada (prompt) GPT-3.5
-      costPer1KCompletion = 0.002; // USD por 1.000 tokens de saída (resposta) GPT-3.5
+    const functionsRegex = /\*\*(.*?)\*\*:\s(.*?)\s-\s(.*?)\s-\s(\d+)\sPF/g;
+    const functions = [];
+    let match;
+    
+    while ((match = functionsRegex.exec(resultString)) !== null) {
+      functions.push({
+        type: match[1].trim(),
+        description: match[2].trim(),
+        complexity: match[3].trim(),
+        points: parseInt(match[4], 10),
+      });
+    }
+  
+    //console.log("🔍 Funções Capturadas:", functions); 
+    return { functions };
+  };
+
+
+  const handleOpenModal = () => {
+    console.log("Prompt gerado:", generatePrompt(manualText));
+    setCurrentPrompt(generatePrompt(manualText));  // Passando o prompt gerado atual para o modal
+    setIsModalOpen(true);  // Abre o modal
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);  // Fecha o modal
+  };
+
+  const handleSavePrompt = (newPrompt: string) => {
+    console.log("🔎 Novo Prompt do Modal (antes de enviar para análise):", newPrompt);
+    setCurrentPrompt(newPrompt);  // Atualiza o prompt com o novo valor
+    setManualText(newPrompt);  // Atualiza o texto manual com o novo prompt
+  };
+
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setFile(event.target.files[0]);
+    }
+  };
+  
+  
+  /*const handleAnalyze = async () => {
+    if (inputMode === "upload" && !file) {
+      return alert("Por favor, selecione um arquivo.");
+    }
+    if (inputMode === "text" && !manualText.trim()) {
+      return alert("Por favor, insira um texto.");
     }
 
-    const promptCost = (promptTokens / 1000) * costPer1KPrompt;
-    const completionCost = (completionTokens / 1000) * costPer1KCompletion;
-
-    return (promptCost + completionCost).toFixed(4); // Retorna com 4 casas decimais
-  };
-
-  const handleUpload = async () => {
-    if (!file) return alert('Por favor, selecione um arquivo.');
-
-    const formData = new FormData();
-    formData.append('file', file);
-
     setLoading(true);
+    const formData = new FormData();
+    const content = inputMode === "upload" && file ? "" : manualText;
+
+    console.log("🚀 Prompt Enviado para Análise:", prompt);
+    
+    formData.append("prompt", generatePrompt(content));
+    if (inputMode === "upload" && file) formData.append("file", file);
+    if (inputMode === "text") formData.append("text", manualText);
 
     try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          throw new Error('Limite de cota excedido. Tente novamente mais tarde.');
-        }
-        throw new Error('Erro ao enviar o arquivo.');
-      }
-
-      const data = await response.json();
-      setResult(data.pontosDeFuncao);
-      setDetails(data.detalhamento);
-      setPlanoDeTestes(data.planoDeTestes);
-      setUsage(data.usage);
-
-      setFile(null);
+      const data = await analyzeContent(formData);
+      setResult(parseResult(data.result));
+      setTotalPoints(data.totalPoints);
     } catch (error) {
-      console.error('❌ Erro:', error);
-      alert(error.message);
+      console.error("Erro:", error);
+      alert("Erro ao processar a análise.");
     } finally {
       setLoading(false);
     }
   };
+*/
 
-  return (
-    <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Arial, sans-serif', position: 'relative' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-        Estimativa de Pontos de Função
-      </h1>
+const handleAnalyze = async () => {
+  if (inputMode === "upload" && !file) {
+    return alert("Por favor, selecione um arquivo.");
+  }
+  if (inputMode === "text" && !manualText.trim()) {
+    return alert("Por favor, insira um texto.");
+  }
 
-      <div
-        style={{
-          border: '1px solid #ddd',
-          padding: '20px',
-          borderRadius: '8px',
-          backgroundColor: '#f9f9f9',
-          display: 'inline-block',
-        }}
-      >
-        <input type="file" onChange={handleFileChange} style={{ margin: '10px 0' }} />
-        <button
-          onClick={handleUpload}
-          disabled={loading || !file}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: loading || !file ? '#ccc' : '#0070f3',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: loading || !file ? 'not-allowed' : 'pointer',
-            marginLeft: '10px',
-          }}
-        >
-          Enviar para Análise
-        </button>
+  setLoading(true);
+  const formData = new FormData();
+
+  // Verificando se o prompt foi alterado
+  const promptToSend = currentPrompt === generatePrompt(manualText) ? generatePrompt(manualText) : currentPrompt;
+
+  console.log("🚀 Prompt Enviado para Análise:", promptToSend);
+  
+  formData.append("prompt", promptToSend);  // Usar o prompt atualizado, seja o original ou o alterado
+  if (inputMode === "upload" && file) formData.append("file", file);
+  if (inputMode === "text") formData.append("text", manualText);
+
+  try {
+    const data = await analyzeContent(formData);
+
+    console.log("📌 Resposta da API:", data);
+    console.log("📌 Resposta da API:", parseResult(data.result));
+
+    setResult(parseResult(data.result));
+    setTotalPoints(data.totalPoints);
+    setHasAnalyzed(true);
+  } catch (error) {
+    console.error("Erro:", error);
+    alert("Erro ao processar a análise.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+   return (
+    <>
+    <Header />  
+    <div className={styles.container}>
+      <h1 className={styles.labelHeader}>Contagem de Pontos de Função</h1>
+      <div className={styles.inputGroup}>
+        <label className={styles.label}>Escolha uma Opção de Envio</label>
+
+        {inputMode === "upload" ? (
+  <select
+    className={styles.select}
+    value="upload"
+    onChange={(e) => setInputMode(e.target.value)}
+  >
+    <option value="upload">Upload de Arquivo</option>
+    <option value="text">Inserir Texto Manualmente</option>
+  </select>
+) : (
+  <select
+    className={styles.select}
+    value={inputMode}
+    onChange={(e) => setInputMode(e.target.value)}
+  >
+    <option value="upload">Upload de Arquivo</option>
+    <option value="text">Inserir Texto Manual</option>
+  </select>
+)}
       </div>
 
-      {(result !== null || details !== null) && (
-        <div style={{ marginTop: '20px' }}>
-          {details && (
-            <table
-              style={{
-                margin: '20px auto',
-                borderCollapse: 'collapse',
-                width: '70%',
-              }}
-            >
-              <thead>
-                <tr>
-                  <th
-                    style={{
-                      border: '1px solid #ddd',
-                      padding: '8px',
-                      backgroundColor: '#0070f3',
-                      color: '#fff',
-                    }}
-                  >
-                    Detalhamento da Estimativa da Contagem de Pontos por Função
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {details
-                  .split('\n')
-                  .map((line, index) => (
-                    <tr key={index}>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{line}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          )}
-
-          {planoDeTestes && (
-            <div style={{ marginTop: '20px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold' }}>Plano de Testes Sugerido</h2>
-              <table
-                style={{
-                  margin: '20px auto',
-                  borderCollapse: 'collapse',
-                  width: '70%',
-                }}
-              >
-                <tbody>
-                  {planoDeTestes
-                    .split('\n')
-                    .map((line, index) => (
-                      <tr key={index}>
-                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>{line}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {inputMode === "upload" ? (
+      
+      <div className={styles.uploadContainer}>
+        <input type="file" id="fileInput" className={styles.fileInput} onChange={handleFileChange} />
+        <label htmlFor="fileInput" className={styles.uploadButton}>📁 Escolher Arquivo</label>
+        {file && <span className={styles.fileName}>{file.name}</span>}
+      </div>
+        
+      ) : (
+        <textarea
+          className={styles.textarea}
+          placeholder="Digite ou cole o texto para análise"
+          value={manualText}
+          onChange={(e) => setManualText(e.target.value)}
+        />
       )}
+
+      <div className={styles.buttonContainer}>
+
+        <button onClick={handleAnalyze} disabled={loading} className={styles.buttonAnalise}>
+          {loading ? "Analisando..." : "Enviar para Análise"}
+        </button>
+
+        <button onClick={handleOpenModal} className={styles.buttonPrompt}>
+            Alterar Prompt
+        </button>
+
+      </div>
+
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={handleCloseModal} 
+          onSave={handleSavePrompt} 
+          currentPrompt={currentPrompt} 
+        />
 
       {loading && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              border: '8px solid #fff',
-              borderTop: '8px solid transparent',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-            }}
-          ></div>
+        <div className={styles.fullscreenSpinner}>
+          <div className={styles.spinner}></div>
+          <p>Analisando...</p>
         </div>
       )}
 
-      <style jsx>{`
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
-    </div>
+      {result.functions.length > 0 ? (
+        <div className={styles.preformattedText}>
+          <h3>Funções Identificadas</h3>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th>Complexidade</th>
+                <th>Pontos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.functions.map((func: any, index: number) => (
+                <tr key={index}>
+                  <td>{func.type}</td>
+                  <td>{func.description}</td>
+                  <td>{func.complexity}</td>
+                  <td>{func.points}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <h4 className={styles.totalPoints}>Total de Pontos de Função: {totalPoints} PF</h4>
+          </div>
+        ) : (
+          hasAnalyzed && result.functions.length === 0 && (
+          <p className={styles.noResults}>Nenhum resultado encontrado para o prompt enviado.</p>
+        )
+      )}
+      </div>
+    </>
   );
 }
 
 
 
 
---------------------------------------------------------------------------------------------------------------
 
-import { IncomingForm } from 'formidable';
-import fs from 'fs';
-import { fileTypeFromBuffer } from 'file-type';
-import mammoth from 'mammoth';
-import pdfParse from 'pdf-parse';
-import OpenAI from 'openai';
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
-export default async function handler(req, res) {
-  if (req.method === 'POST') {
-    const form = new IncomingForm({ keepExtensions: true });
 
-    form.parse(req, async (err, fields, files) => {
-      if (err) {
-        console.error('❌ Erro ao processar o upload:', err);
-        return res.status(500).json({ error: 'Erro ao processar o upload.' });
+"use client";
+
+import { useState } from "react";
+import { analyzeContent } from "@/services/api";
+import styles from "./style.module.scss";
+import Header from "@/components/Header";
+import Modal from "@/components/Modal"; 
+
+export default function Funcao() {
+  const [inputMode, setInputMode] = useState("upload");
+  const [manualText, setManualText] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [result, setResult] = useState<any>(null);
+  const [totalPoints, setTotalPoints] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [currentPrompt, setCurrentPrompt] = useState<string>("");
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setFile(event.target.files[0]);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (inputMode === "upload" && !file) {
+      return alert("Por favor, selecione um arquivo.");
+    }
+    if (inputMode === "text" && !manualText.trim()) {
+      return alert("Por favor, insira um texto.");
+    }
+  
+    setLoading(true);
+    
+    const formData = new FormData();
+    
+    // Usa o prompt atualizado pelo usuário no modal
+    formData.append("prompt", currentPrompt);  
+  
+    if (inputMode === "upload" && file) {
+      const validTypes = [
+        "text/plain", 
+        "application/pdf", 
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ];
+    
+      if (!validTypes.includes(file.type)) {
+        setLoading(false);
+        return alert("Formato de arquivo inválido. Use apenas .txt, .pdf ou .docx.");
       }
-
-      const file = files.file;
-      const filePath = file.filepath || (Array.isArray(file) ? file[0].filepath : null);
-
-      if (!filePath) {
-        return res.status(400).json({ error: 'Arquivo não encontrado.' });
+    
+      formData.append("file", file);
+    }
+  
+    try {
+      const response = await analyzeContent(formData);
+      if (!response || !response.result) {
+        throw new Error("Resposta inválida do servidor.");
       }
+      setResult(parseResult(response.result));
+      setTotalPoints(response.totalPoints);
+    } catch (error: any) {
+      console.error("Erro na análise:", error);
+      let errorMessage = "Erro ao processar a análise.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      alert(`Erro ao processar a análise: ${error.message || error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const generatePrompt = (content: string): string => {
+    return `
+Desenvolva um **plano de testes baseado no TDD (Test-Driven Development)** 
+para a história de usuário que foi encaminhada considerando as funcionalidades, regras de negócio, 
+regras de interfaces, regras de sistemas e critérios de aceite. O plano de testes deve incluir:
 
-      try {
-        const buffer = fs.readFileSync(filePath);
-        const fileTypeResult = await fileTypeFromBuffer(buffer);
-        const fileType = fileTypeResult ? fileTypeResult.ext : 'unknown';
+### 1. Estrutura do Plano de Testes
+- **Cenários de Teste**: Definir os principais cenários com base na funcionalidade descrita.
+- **Casos de Teste**: Para cada cenário, incluir:
+  - **ID do Caso de Teste**
+  - **Descrição do Caso de Teste**
+  - **Pré-condições**
+  - **Passos**
+  - **Resultado Esperado**
+- **Mapeamento com Requisitos**: Relacionar regras de negócio e critérios de aceite.
+- **Validações de Interface**: Testes para mensagens e botões de navegação.
+- **Testes Negativos e de Erro**: Testar entradas inválidas e cenários de erro.
+- **Testes de Integração**: Comunicação com **APIs, banco de dados e sistemas externos**.
 
-        let content = '';
-        if (fileType === 'pdf') {
-          const data = await pdfParse(buffer);
-          content = data.text;
-        } else if (fileType === 'docx') {
-          const result = await mammoth.extractRawText({ buffer });
-          content = result.value;
-        } else {
-          return res.status(400).json({ error: 'Formato de arquivo não suportado.' });
-        }
-
-        const promptPF = `Você é um especialista em contagem de Pontos de Função (PF) conforme o Manual de Práticas de Contagem de Pontos de Função (CPM). Avalie o seguinte conteúdo:
-
+### 2. Conteúdo para análise
 """
 ${content}
 """
 
-Classifique cada função de acordo com as regras do CPM e calcule o total de Pontos de Função (PF).
+Retorne o plano de testes estruturado, considerando as melhores práticas do TDD.`;
+  };
 
-✅ **Retorne o resultado da seguinte forma:**
-1. **Funções Identificadas:**
-   - Entrada Externa (EE): [Descrição] - [Complexidade] - [Pontos]
-   - Saída Externa (SE): [Descrição] - [Complexidade] - [Pontos]
-   - Consulta Externa (CE): [Descrição] - [Complexidade] - [Pontos]
-   - Arquivo Lógico Interno (ALI): [Descrição] - [Complexidade] - [Pontos]
-   - Arquivo de Interface Externa (AIE): [Descrição] - [Complexidade] - [Pontos]
+  const parseResult = (resultString: string) => {
+    return { text: resultString };
+  };
 
-2. **Total de Pontos de Função:** [Soma Final]`;
+  /*
+  const handleOpenModal = () => {
+    console.log("Prompt gerado:", generatePrompt(manualText));
+    setCurrentPrompt(generatePrompt(manualText));  // Passando o prompt gerado atual para o modal
+    setIsModalOpen(true);  // Abre o modal
+  };
+  */
 
-        const responsePF = await openai.chat.completions.create({
-          model: 'gpt-4',
-          messages: [{ role: 'user', content: promptPF }],
-          temperature: 0,
-          max_tokens: 1000,
-        });
+  const handleOpenModal = () => {
+    const content = inputMode === "upload" && file ? "Arquivo selecionado: " + file.name : manualText;
+    const generatedPrompt = generatePrompt(content);
+    console.log("Prompt gerado:", generatedPrompt);
+    setCurrentPrompt(generatedPrompt);
+    setIsModalOpen(true);
+  };
+  
+  const handleCloseModal = () => {
+    setIsModalOpen(false);  // Fecha o modal
+  };
 
-        const detalhamentoPF = responsePF.choices[0]?.message?.content.trim();
+  const handleSavePrompt = (newPrompt: string) => {
+    console.log("🔎 Novo Prompt do Modal (antes de enviar para análise):", newPrompt);
+    setCurrentPrompt(newPrompt);  // Atualiza o prompt com o novo valor
+    setManualText(newPrompt);  // Atualiza o texto manual com o novo prompt
+  };
 
-        const promptTestes = `Você é um especialista em Análise de Requisitos e Garantia de Qualidade de Software.
 
-Com base nos critérios de aceite descritos no seguinte conteúdo e no detalhamento da contagem de Pontos de Função (PF), gere um Plano de Testes contendo casos de teste relevantes:
+  return (
+    <>
+    <Header />  
+    <div className={styles.container}>
+      <h1 className={styles.labelHeader}>Plano de Testes</h1>
+      <div className={styles.inputGroup}>
+        <label className={styles.label}>Escolha uma Opção de Envio</label>
+        <select 
+          className={styles.select} 
+          value={inputMode} 
+          onChange={(e) => setInputMode(e.target.value)}>
+          <option value="upload">Upload de Arquivo</option>
+          <option value="text">Inserir Texto Manual</option>
+        </select>
+      </div>
 
-"""
-${content}
-${detalhamentoPF}
-"""
+      {inputMode === "upload" ? (
 
-✅ **Retorne o resultado no seguinte formato:**
+      <div className={styles.uploadContainer}>
+        <input type="file" id="fileInput" className={styles.fileInput} onChange={handleFileChange} />
+        <label htmlFor="fileInput" className={styles.uploadButton}>📁 Escolher Arquivo</label>
+        {file && <span className={styles.fileName}>{file.name}</span>}
+      </div>
 
-1️⃣ **Casos de Teste Sugeridos:**
-- **Caso de Teste 1:** [Descrição do Caso de Teste]
-  - **Critério de Aceite:** [Critério associado]
-  - **Condições de Entrada:** [Pré-condições necessárias]
-  - **Passos para Execução:** [Etapas detalhadas]
-  - **Resultado Esperado:** [O que deve acontecer para o teste ser considerado aprovado]
-  - **Complexidade:** [Baixa, Média, Alta]
+       
+      ) : (
+        <textarea
+          className={styles.textarea}
+          placeholder="Digite ou cole o texto para análise"
+          value={manualText}
+          onChange={(e) => setManualText(e.target.value)}
+        />
+      )}
+      
+      <div className={styles.buttonContainer}>
 
-2️⃣ **Resumo do Plano de Testes:**
-- Total de Casos de Teste: [Quantidade]
-- Cobertura de Critérios de Aceite: [Descrição resumida da cobertura]`;
+        <button onClick={handleAnalyze} disabled={loading} className={styles.buttonAnalise}>
+          {loading ? "Analisando..." : "Enviar para Análise"}
+        </button>
 
-        const responseTestes = await openai.chat.completions.create({
-          model: 'gpt-4',
-          messages: [{ role: 'user', content: promptTestes }],
-          temperature: 0,
-          max_tokens: 1500,
-        });
+        <button onClick={handleOpenModal} className={styles.buttonPrompt}>
+            Alterar Prompt
+        </button>
 
-        const planoDeTestes = responseTestes.choices[0]?.message?.content.trim();
+      </div>
 
-        return res.status(200).json({
-          pontosDeFuncao: detalhamentoPF.match(/\d+/)?.[0] || '0',
-          detalhamento: detalhamentoPF,
-          planoDeTestes: planoDeTestes,
-        });
-      } catch (error) {
-        console.error('❌ Erro ao processar o arquivo:', error);
-        return res.status(500).json({ error: 'Erro interno ao processar o arquivo.' });
-      }
-    });
-  } else {
-    res.setHeader('Allow', ['POST']);
-    res.status(405).end(`Método ${req.method} não permitido`);
-  }
+
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={handleCloseModal} 
+          onSave={handleSavePrompt} 
+          currentPrompt={currentPrompt} 
+        />
+
+      {loading && (
+        <div className={styles.fullscreenSpinner}>
+          <div className={styles.spinner}></div>
+          <p>Aguarde, analisando...</p>
+        </div>
+      )}
+
+
+      {result && (
+        <div className={styles.result}>
+          <h3>Plano de Testes Gerado</h3>
+          <pre className={styles.preformattedText}>{result.text}</pre>
+        </div>
+      )}
+    </div>
+    </>
+  );
 }

@@ -35,6 +35,7 @@ export async function processFile(file: Express.Multer.File | null, prompt: stri
 
   const response = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
+    //model: "gpt-4",
     messages: [{ role: "user", content: `${prompt}\n\n${content}` }],
     temperature: 0,
     max_tokens: 1500,
