@@ -27,26 +27,27 @@ export default function Funcao() {
 
   const generatePrompt = (content: string): string => {
     return `
-    Você é um especialista em **Análise de Pontos de Função (APF)** conforme o 
-    **Manual de Práticas de Contagem de Pontos de Função (CPM - IFPUG)**. 
-    Sua tarefa é avaliar o conteúdo encaminhado considerando as funcionalidades, regras de negócio, 
-    regras de interfaces, regras de sistemas e critérios de aceite e classificar 
-    **cada função identificada**, determinando sua complexidade e calculando o 
-    total de Pontos de Função (PF).
 
-    ### **Regras da Análise**
-    - A contagem deve ser feita de acordo com os **requisitos funcionais do usuário**.
-    - Utilize os critérios do CPM para classificar **Entrada Externa (EE), Saída Externa (SE), Consulta Externa (CE), Arquivo Lógico Interno (ALI) e Arquivo de Interface Externa (AIE)**.
-    - Atribua corretamente a **complexidade (Baixa, Média, Alta)** para cada função, considerando:
-      - **EE, SE e CE**: número de Arquivos Referenciados (AR) e Elementos de Dados (DET).
-      - **ALI e AIE**: número de Registros Lógicos Internos (RLI) e Elementos de Dados (DET).
+    Você é um especialista em **Análise de Pontos de Função (APF)** conforme o **Manual de Práticas de Contagem de Pontos de Função (CPM - IFPUG)**.  
+Sua tarefa é **analisar o conteúdo fornecido**, identificando todas as **funções transacionais e funções de dados**, classificando sua complexidade e calculando o total de **Pontos de Função (PF)**.
 
-    ### **Conteúdo para Análise**:
-    """
-    ${content}
-    """
+## **🔹 Regras da Contagem**
+- A contagem deve seguir os **requisitos funcionais do usuário**, considerando:  
+  - **Funções Transacionais:**  
+    - **Entrada Externa (EE)**  
+    - **Saída Externa (SE)**  
+    - **Consulta Externa (CE)**  
+  - **Funções de Dados:**  
+    - **Arquivo Lógico Interno (ALI)**  
+    - **Arquivo de Interface Externa (AIE)**  
+- Classifique a complexidade de cada função (**Baixa, Média, Alta**) conforme o número de **Elementos de Dados (DET)** e **Arquivos Referenciados (AR) ou Registros Lógicos Internos (RLI)**.  
+- Utilize a **tabela de complexidade oficial do CPM - IFPUG** para atribuir a pontuação correta.  
 
-    ### **Instruções para a Resposta**
+## **🔹 Conteúdo para Análise**
+"""
+${content}
+"""
+### **Instruções para a Resposta**
     1. **Identifique e classifique cada função**, utilizando o seguinte formato:
        - **Entrada Externa (EE)**: [Descrição] - [Complexidade] - [Pontos]
        - **Saída Externa (SE)**: [Descrição] - [Complexidade] - [Pontos]
@@ -56,12 +57,16 @@ export default function Funcao() {
 
     2. **Cálculo Total**:
        - Some os Pontos de Função identificados e forneça o **Total de Pontos de Função (PF)**.
-
-    📢 **Atenção**: Retorne apenas a análise no formato solicitado, sem explicações adicionais.`;
+   
+📢 **Atenção**:  
+- Retorne a análise exclusivamente no formato solicitado.  
+- Não inclua explicações adicionais.  
+- Caso existam funções não identificáveis, liste-as separadamente como "Possíveis Funções Não Classificadas" para revisão.  
+    
+    `;
   };
 
-
-  const parseResult = (resultString: string) => {
+ const parseResult = (resultString: string) => {
 
     const functionsRegex = /\*\*(.*?)\*\*:\s(.*?)\s-\s(.*?)\s-\s(\d+)\sPF/g;
     const functions = [];
@@ -194,12 +199,11 @@ export default function Funcao() {
         {loading && (
           <div className={styles.fullscreenSpinner}>
             <div className={styles.spinner}></div>
-            <p>Analisando...</p>
           </div>
         )}
 
         {result.functions.length > 0 ? (
-          <div className={styles.preformattedText}>
+          <div className={styles.tableContainer}>
             <h3>Funções Identificadas</h3>
             <table className={styles.table}>
               <thead>

@@ -3,15 +3,21 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background-color: #6734ff; 
+  background-color: #FFF; 
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  font-family: "DM Sans", sans-serif;
-  width: 100%;
+  font-family: "Roboto", sans-serif;
+  width: 97%;
 }
 
 .logoContainer {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 10px; /* Espaço entre a imagem e o texto */
+}
+
+.logo {
+  width: 30px;  /* Ajuste conforme necessário */
+  height: 30px; /* Ajuste conforme necessário */
 }
 
 .ellaWrapper {
@@ -23,18 +29,18 @@
 .ella {
   font-size: 28px;
   font-weight: bold;
-  color: #ffffff; 
+  color: #8f969d  ; 
 }
 
 .definition {
   font-size: 14px;
   font-weight: normal;
-  color: #bfbfbf; 
+  color: #8f969d  ; 
 }
 
 .tagline {
   font-size: 14px;
-  color: #ffffff;
+  color: #8f969d  ;
   margin-top: 4px;
 }
 
@@ -51,12 +57,12 @@
     display: flex;
     align-items: center;
     font-size: 16px;
-    color: #ffffff;
+    color: #8f969d;
     text-decoration: none;
     transition: color 0.3s ease-in-out;
 
     &:hover {
-      color: #1e90ff; /* Azul claro ao passar o mouse */
+      color: #000; /* Azul claro ao passar o mouse */
     }
 
     .icon {

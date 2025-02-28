@@ -27,31 +27,22 @@ export default function PlanoDeTestes() {
 
   const generateTestPlanPrompt = (content: string): string => {
     return `
-    
-Desenvolva um **plano de testes baseado no TDD (Test-Driven Development)** 
-para a história de usuário que foi encaminhada considerando as funcionalidades, 
-regras de negócio, regras de interfaces, regras de sistemas e critérios de aceite. 
-O plano de testes deve incluir:
 
-### 1. Estrutura do Plano de Testes
-- **Cenários de Teste**: Definir os principais cenários com base na funcionalidade descrita.
-- **Casos de Teste**: Para cada cenário, incluir:
-  - **ID do Caso de Teste**
-  - **Descrição do Caso de Teste**
-  - **Pré-condições**
-  - **Passos**
-  - **Resultado Esperado**
-- **Mapeamento com Requisitos**: Relacionar regras de negócio e critérios de aceite.
-- **Validações de Interface**: Testes para mensagens e botões de navegação.
-- **Testes Negativos e de Erro**: Testar entradas inválidas e cenários de erro.
-- **Testes de Integração**: Comunicação com **APIs, banco de dados e sistemas externos**.
 
-### 2. Conteúdo para análise
+Desenvolva um **plano de testes baseado no BDD (Behavior-Driven Development)** para 
+a história de usuário fornecida, garantindo cobertura para **funcionalidades, 
+regras de negócio, regras de interfaces, regras de sistemas e critérios de aceite**.
+
+O plano de testes deve seguir a estrutura do **BDD/Gherkin**, 
+facilitando a automação e a comunicação entre equipes.
+
+### 1️⃣ **Definição dos Casos de Teste**
+Cada **cenário** deve ser descrito no formato **Gherkin**:
+
 """
 ${content}
 """
-
-Retorne o plano de testes estruturado, considerando as melhores práticas do TDD.`;
+Retorne o plano de testes estruturado, considerando as melhores práticas do BDD.`;
   };
     
   const parseTestPlanResult = (resultString: string) => {
@@ -93,7 +84,7 @@ Retorne o plano de testes estruturado, considerando as melhores práticas do TDD
     try {
       const data = await analyzeContent(formData);
 
-      console.log("📌 Resposta da API:", data);
+      console.log("📌 Resposta da API PT:", data.result);
 
       setResult(parseTestPlanResult(data.result)); // Usar a função de análise do plano de testes
 
@@ -169,10 +160,10 @@ Retorne o plano de testes estruturado, considerando as melhores práticas do TDD
       {loading && (
         <div className={styles.fullscreenSpinner}>
           <div className={styles.spinner}></div>
-          <p>Aguarde, analisando...</p>
         </div>
       )}
 
+     
       {hasAnalyzed && result.text ? (
         <div className={styles.result}>
           <h4>Plano de Testes Gerado</h4>

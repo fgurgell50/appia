@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { FiHome, FiCpu, FiClipboard } from "react-icons/fi"; // Ícones do pacote react-icons
 import styles from "./style.module.scss";
 
@@ -6,6 +7,13 @@ export default function Header() {
   return (
     <header className={styles.header}>
         <div className={styles.logoContainer}>
+        <Image 
+          src="/favicon.png" // Caminho dentro da pasta public
+          alt="ELLA Logo"
+          width={30} // Ajuste conforme necessário
+          height={30} // Ajuste conforme necessário
+          className={styles.logo}
+        />
         <div className={styles.ellaWrapper}>
             <span className={styles.ella}>ELLA</span>
         </div>
